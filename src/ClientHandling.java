@@ -7,6 +7,7 @@ public class ClientHandling implements Runnable {
     private Socket socket;
     private BufferedReader reader;
     private BufferedWriter writer;
+    private String username = "Anonymous";
 
     public ClientHandling(Socket socket) throws IOException {
         this.socket = socket;
@@ -23,7 +24,24 @@ public class ClientHandling implements Runnable {
         try {
             String message;
             while ((message = reader.readLine()) != null) {
-                Chatroom.sendMessage(message, this);
+                if (message.startsWith("/name ")) {
+                    String newName = message.substring(6).trim();
+
+                    boolean success = Chatroom.registerUsername(newName, this);
+
+                    if (success) {
+                        username = newName;
+                        writer.write("Username set to " + username);
+                    }
+                    else {
+                        writer.write("Username already taken");
+                    }
+
+                    writer.newLine();
+                    writer.flush();
+                } else {
+                    Chatroom.sendMessage(username + ": " + message, this);
+                }
             }
 
         } catch (IOException ignored) {

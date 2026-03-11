@@ -4,11 +4,15 @@ import java.net.Socket;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Chatroom {
 
     private static final Set<ClientHandling> clients =
             Collections.synchronizedSet(new HashSet<>());
+
+    private static final Map<String, ClientHandling> usernames = new HashMap<>();
 
     public static void main(String[] args) throws IOException {
         int port = 5000;
@@ -34,6 +38,19 @@ public class Chatroom {
                 }
             }
         }
+    }
+
+    public static boolean registerUsername(String username, ClientHandling client) {
+        if (usernames.containsKey(username)) {
+            return false;
+        }
+
+        try {
+            Thread.sleep(10000);
+        } catch (InterruptedException ignored) {}
+
+        usernames.put(username, client);
+        return true;
     }
 
     public static void clientRemove(ClientHandling client) {
