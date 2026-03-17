@@ -7,9 +7,12 @@ public class ClientHandling implements Runnable {
     private Socket socket;
     private BufferedReader reader;
     private BufferedWriter writer;
+
     private String username = "Anonymous";
+    private String currentGroup = null;
 
     public ClientHandling(Socket socket) throws IOException {
+
         this.socket = socket;
 
         reader = new BufferedReader(
@@ -21,48 +24,52 @@ public class ClientHandling implements Runnable {
 
     @Override
     public void run() {
+
         try {
+
             String message;
+
             while ((message = reader.readLine()) != null) {
+
                 if (message.startsWith("/name ")) {
-                    String newName = message.substring(6).trim();
 
-                    boolean success = Chatroom.registerUsername(newName, this);
+                    username = message.substring(6);
+                    sendMessage("Username set to " + username);
 
-                    if (success) {
-                        username = newName;
-                        writer.write("Username set to " + username);
-                    }
-                    else {
-                        writer.write("Username already taken");
-                    }
-
-                    writer.newLine();
-                    writer.flush();
-                } else {
-                    Chatroom.sendMessage(username + ": " + message, this);
                 }
+
+                else if (message.startsWith("/join ")) {
+
+                    currentGroup = message.substring(6);
+                    Chatroom.joinGroup(currentGroup, this);
+
+                    sendMessage("Joined group " + currentGroup);
+
+                }
+
+                else if (currentGroup != null) {
+
+                    Chatroom.sendGroupMessage(
+                            currentGroup,
+                            "[" + currentGroup + "] " + username + ": " + message
+                    );
+
+                }
+
             }
 
         } catch (IOException ignored) {
-        } finally {
-            Chatroom.clientRemove(this);
-
-            try {
-                socket.close();
-            } catch (IOException ignored) {}
-
-            System.out.println("Client disconnected");
         }
     }
 
     public void sendMessage(String message) {
+
         try {
+
             writer.write(message);
             writer.newLine();
             writer.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+
+        } catch (IOException ignored) {}
     }
 }
