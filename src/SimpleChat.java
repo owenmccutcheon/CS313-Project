@@ -50,9 +50,7 @@ public class SimpleChat {
             try {
                 String message;
                 while (running && (message = reader.readLine()) != null) {
-                    System.out.print("\r");
-                    System.out.println(message);
-                    System.out.print("You: ");
+                    System.out.println("Peer: " + message);
                 }
             } catch (IOException e) {
                 if (running) {
