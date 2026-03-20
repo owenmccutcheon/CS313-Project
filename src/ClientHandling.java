@@ -42,6 +42,13 @@ public class ClientHandling implements Runnable {
                         username = newName;
 
                         writer.write("Username set to " + username);
+                        writer.newLine();
+                        writer.flush();
+
+                        //Delivering mail
+                        for (String msg : Chatroom.getMail(username)) {
+                            writer.write("[MAIL] " + msg);
+                        }
                     } else {
 
                         writer.write("Username already taken");
@@ -63,7 +70,24 @@ public class ClientHandling implements Runnable {
                     writer.newLine();
                     writer.flush();
                 }
+                else if (message.startsWith("/mail ")) {
+                    String[] parts = message.split(" ", 3);
+                    if(parts.length < 3) {
+                        writer.write("Usage: /mail <user> <message>");
+                        writer.newLine();
+                        writer.flush();
+                        continue;
+                    }
 
+                    String target = parts[1];
+                    String msg = parts[2];
+
+                    Chatroom.sendMail(target, username + ": " + msg, this);
+
+                    writer.write("Mail sent to " + target);
+                    writer.newLine();
+                    writer.flush();
+                }
                 else {
 
                     if (currentGroup != null) {
@@ -90,7 +114,7 @@ public class ClientHandling implements Runnable {
         }
     }
 
-    public void sendMessage(String message) {
+    public synchronized void sendMessage(String message) {
 
         try {
 

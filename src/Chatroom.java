@@ -7,8 +7,14 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.HashMap;
+import java.util.List;
+import java.util.ArrayList;
+
 
 public class Chatroom {
+
+    private static final Map<String, List<String>> mailboxes = new ConcurrentHashMap<>();
 
     private static final Set<ClientHandling> clients =
             Collections.synchronizedSet(new HashSet<>());
@@ -78,9 +84,32 @@ public class Chatroom {
         }
     }
 
+    public static ClientHandling getUser(String username) {
+        return usernames.get(username);
+    }
+
+    public static void sendMail(String recipient, String message, ClientHandling sender) {
+        ClientHandling target = usernames.get(recipient);
+
+        //deliver instant when user online
+        if (target != null) {
+            target.sendMessage("[MAIL] " + message);
+            return;
+        }
+
+        mailboxes.computeIfAbsent(recipient, k -> Collections.synchronizedList(new ArrayList<>())).add(message);
+    }
+
+    public static List<String> getMail (String username) {
+        List<String> messages = mailboxes.remove(username);
+        return messages !=null ? messages : new ArrayList<>();
+    }
+
     public static void clientRemove(ClientHandling client) {
 
         clients.remove(client);
+
+        usernames.values().remove(client);
 
         for (Set<ClientHandling> group : groups.values()) {
 
