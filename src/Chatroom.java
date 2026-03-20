@@ -31,12 +31,15 @@ public class Chatroom {
     public static void joinGroup(String group, ClientHandling client) {
 
         if (!groups.containsKey(group)) {
+
+
+            try { Thread.sleep(50); } catch (InterruptedException ignored) {}
+
             groups.put(group, new HashSet<>());
         }
 
         groups.get(group).add(client);
     }
-
     public static void sendGroupMessage(String group, String message) {
 
         Set<ClientHandling> members = groups.get(group);
