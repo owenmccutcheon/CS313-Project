@@ -4,11 +4,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
 public class SimpleChat {
-
     private static volatile boolean running = true;
 
     public static void main(String[] args) {
-
         if (args.length < 2) {
             System.out.println("Usage:");
             System.out.println("Server mode: java SimpleChat server <port>");
@@ -36,13 +34,12 @@ public class SimpleChat {
     }
 
     private static void startChat(Socket socket) throws IOException {
-
         BufferedReader reader = new BufferedReader(
-                new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
-
+                new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8)
+        );
         BufferedWriter writer = new BufferedWriter(
-                new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
-
+                new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8)
+        );
         Scanner scanner = new Scanner(System.in, StandardCharsets.UTF_8);
 
         // Receiving thread
