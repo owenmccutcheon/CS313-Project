@@ -1,19 +1,19 @@
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.HashSet;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.Set;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Chatroom {
 
-    private static final Set<ClientHandling> clients =
+    private static Set<ClientHandling> clients =
             Collections.synchronizedSet(new HashSet<>());
 
-    private static final Map<String, ClientHandling> usernames = new ConcurrentHashMap<>();
+    private static Map<String, ClientHandling> usernames =
+            new ConcurrentHashMap<>();
 
     public static void main(String[] args) throws IOException {
         int port = 5000;
@@ -47,5 +47,27 @@ public class Chatroom {
 
     public static void clientRemove(ClientHandling client) {
         clients.remove(client);
+
+        String nameToRemove = null;
+        for (Map.Entry<String, ClientHandling> entry : usernames.entrySet()) {
+            if (entry.getValue() == client) {
+                nameToRemove = entry.getKey();
+                break;
+            }
+        }
+
+        if (nameToRemove != null) {
+            usernames.remove(nameToRemove);
+        }
+    }
+
+    public static void sendFile(String filename, byte[] data, ClientHandling sender) {
+        synchronized (clients) {
+            for (ClientHandling client : clients) {
+                if (client != sender) {
+                    client.sendFile(filename, data);
+                }
+            }
+        }
     }
 }

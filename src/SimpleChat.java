@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Scanner;
 
 public class SimpleChat {
@@ -9,9 +10,8 @@ public class SimpleChat {
 
     public static void main(String[] args) {
 
-        if (args.length < 2) {
+        if (args.length < 3) {
             System.out.println("Usage:");
-            System.out.println("Server mode: java SimpleChat server <port>");
             System.out.println("Client mode: java SimpleChat client <host> <port>");
             return;
         }
@@ -45,15 +45,34 @@ public class SimpleChat {
 
         Scanner scanner = new Scanner(System.in, StandardCharsets.UTF_8);
 
-        // Receiving thread
         Thread receiveThread = new Thread(() -> {
             try {
                 String message;
+
                 while (running && (message = reader.readLine()) != null) {
-                    System.out.print("\r");
-                    System.out.println(message);
-                    System.out.print("You: ");
+
+                    if (message.startsWith("FILE ")) {
+                        String[] parts = message.split(" ", 3);
+
+                        String filename = parts[1];
+                        String encodedData = parts[2];
+
+                        byte[] fileData = Base64.getDecoder().decode(encodedData);
+
+                        FileOutputStream fos = new FileOutputStream("received_" + filename);
+                        fos.write(fileData);
+                        fos.close();
+
+                        System.out.print("\r");
+                        System.out.println("File received: received_" + filename);
+                        System.out.print("You: ");
+                    } else {
+                        System.out.print("\r");
+                        System.out.println(message);
+                        System.out.print("You: ");
+                    }
                 }
+
             } catch (IOException e) {
                 if (running) {
                     System.out.println("Connection closed.");
@@ -65,7 +84,6 @@ public class SimpleChat {
 
         receiveThread.start();
 
-        // Sending loop
         while (running) {
             System.out.print("You: ");
             String message = scanner.nextLine();
