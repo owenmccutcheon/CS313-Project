@@ -8,6 +8,7 @@ public class ClientHandling implements Runnable {
     private final BufferedReader reader;
     private final BufferedWriter writer;
     private String username = "Anonymous";
+    private String currentGroup = null;
 
     public ClientHandling(Socket socket) throws IOException {
         this.socket = socket;
@@ -39,6 +40,34 @@ public class ClientHandling implements Runnable {
                     }
                 }
 
+                else if (message.startsWith("/join ")) {
+                    String newGroup = message.substring(6).trim();
+
+                    if (newGroup.isEmpty()) {
+                        sendMessage("Usage: /join <group>");
+                        continue;
+                    }
+
+                    if (currentGroup != null) {
+                        Chatroom.leaveGroup(currentGroup, this);
+                    }
+
+                    Chatroom.joinGroup(newGroup, this);
+                    currentGroup = newGroup;
+
+                    sendMessage("Joined group: " + currentGroup);
+                }
+
+                else if (message.equals("/leave")) {
+                    if (currentGroup == null) {
+                        sendMessage("You are not in a group.");
+                    } else {
+                        Chatroom.leaveGroup(currentGroup, this);
+                        sendMessage("Left group: " + currentGroup);
+                        currentGroup = null;
+                    }
+                }
+
                 else if (message.startsWith("/send ")) {
                     String[] parts = message.split(" ", 3);
 
@@ -65,14 +94,13 @@ public class ClientHandling implements Runnable {
 
                     long fileSize = file.length();
 
-                    // Server only signals the receiver.
+                    // Server only signals the receiver
                     target.sendMessage("FILE_OFFER " + username + " " + file.getName() + " " + fileSize);
                     sendMessage("File offer sent to " + targetUser + ": " + file.getName());
                 }
 
                 else if (message.startsWith("FILE_READY ")) {
-
-                    // FILE_READY <senderUsername>
+                    // FILE_READY <senderUsername> <port>
                     String[] parts = message.split(" ", 3);
 
                     if (parts.length < 3) {
@@ -86,15 +114,13 @@ public class ClientHandling implements Runnable {
                     ClientHandling sender = Chatroom.getUser(senderUsername);
 
                     if (sender != null) {
-                        // Tell sender the receiver's IP + port.
                         String receiverIp = socket.getInetAddress().getHostAddress();
                         sender.sendMessage("FILE_READY " + username + " " + receiverIp + " " + port);
                     }
                 }
 
                 else if (message.startsWith("FILE_REJECT ")) {
-
-                    // FILE_REJECT
+                    // FILE_REJECT <senderUsername>
                     String[] parts = message.split(" ", 2);
 
                     if (parts.length < 2) {
@@ -111,13 +137,25 @@ public class ClientHandling implements Runnable {
                 }
 
                 else {
-                    Chatroom.sendMessage(username + ": " + message, this);
+                    if (currentGroup != null) {
+                        Chatroom.sendGroupMessage(
+                                currentGroup,
+                                "[" + currentGroup + "] " + username + ": " + message,
+                                this
+                        );
+                    } else {
+                        Chatroom.sendMessage(username + ": " + message, this);
+                    }
                 }
             }
 
         } catch (IOException e) {
             System.out.println("Connection error");
         } finally {
+            if (currentGroup != null) {
+                Chatroom.leaveGroup(currentGroup, this);
+            }
+
             Chatroom.clientRemove(this);
 
             try {

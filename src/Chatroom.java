@@ -15,6 +15,10 @@ public class Chatroom {
     private static final Map<String, ClientHandling> usernames =
             new ConcurrentHashMap<>();
 
+    // group name -> members
+    private static final Map<String, Set<ClientHandling>> groups =
+            new ConcurrentHashMap<>();
+
     public static void main(String[] args) throws IOException {
         int port = 5000;
         ServerSocket serverSocket = new ServerSocket(port);
@@ -56,6 +60,34 @@ public class Chatroom {
         }
     }
 
+    public static void joinGroup(String group, ClientHandling client) {
+        groups.putIfAbsent(group, ConcurrentHashMap.newKeySet());
+        groups.get(group).add(client);
+    }
+
+    public static void leaveGroup(String group, ClientHandling client) {
+        Set<ClientHandling> members = groups.get(group);
+        if (members != null) {
+            members.remove(client);
+            if (members.isEmpty()) {
+                groups.remove(group);
+            }
+        }
+    }
+
+    public static void sendGroupMessage(String group, String message, ClientHandling sender) {
+        Set<ClientHandling> members = groups.get(group);
+        if (members == null) {
+            return;
+        }
+
+        for (ClientHandling client : members) {
+            if (client != sender) {
+                client.sendMessage(message);
+            }
+        }
+    }
+
     public static void clientRemove(ClientHandling client) {
         clients.remove(client);
 
@@ -69,6 +101,10 @@ public class Chatroom {
 
         if (nameToRemove != null) {
             usernames.remove(nameToRemove);
+        }
+
+        for (Set<ClientHandling> members : groups.values()) {
+            members.remove(client);
         }
     }
 }
