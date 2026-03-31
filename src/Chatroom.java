@@ -3,22 +3,22 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Set;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Chatroom {
 
-    private static Set<ClientHandling> clients =
+    private static final Set<ClientHandling> clients =
             Collections.synchronizedSet(new HashSet<>());
 
-    private static Map<String, ClientHandling> usernames =
+    private static final Map<String, ClientHandling> usernames =
             new ConcurrentHashMap<>();
 
     public static void main(String[] args) throws IOException {
         int port = 5000;
         ServerSocket serverSocket = new ServerSocket(port);
-        System.out.println("Server started on port 5000");
+        System.out.println("Server started on port " + port);
 
         while (true) {
             Socket socket = serverSocket.accept();
@@ -45,6 +45,17 @@ public class Chatroom {
         return usernames.putIfAbsent(username, client) == null;
     }
 
+    public static ClientHandling getUser(String username) {
+        return usernames.get(username);
+    }
+
+    public static void sendToUser(String username, String message) {
+        ClientHandling target = usernames.get(username);
+        if (target != null) {
+            target.sendMessage(message);
+        }
+    }
+
     public static void clientRemove(ClientHandling client) {
         clients.remove(client);
 
@@ -58,16 +69,6 @@ public class Chatroom {
 
         if (nameToRemove != null) {
             usernames.remove(nameToRemove);
-        }
-    }
-
-    public static void sendFile(String filename, byte[] data, ClientHandling sender) {
-        synchronized (clients) {
-            for (ClientHandling client : clients) {
-                if (client != sender) {
-                    client.sendFile(filename, data);
-                }
-            }
         }
     }
 }

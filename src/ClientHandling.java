@@ -1,13 +1,12 @@
 import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 
 public class ClientHandling implements Runnable {
 
-    private Socket socket;
-    private BufferedReader reader;
-    private BufferedWriter writer;
+    private final Socket socket;
+    private final BufferedReader reader;
+    private final BufferedWriter writer;
     private String username = "Anonymous";
 
     public ClientHandling(Socket socket) throws IOException {
@@ -34,45 +33,81 @@ public class ClientHandling implements Runnable {
 
                     if (ok) {
                         username = newName;
-                        writer.write("Username set to " + username);
+                        sendMessage("Username set to " + username);
                     } else {
-                        writer.write("Username already taken");
+                        sendMessage("Username already taken");
                     }
-
-                    writer.newLine();
-                    writer.flush();
                 }
 
                 else if (message.startsWith("/send ")) {
-                    String filename = message.substring(6).trim();
-                    File file = new File(filename);
+                    String[] parts = message.split(" ", 3);
 
-                    if (!file.exists()) {
-                        writer.write("File not found");
-                        writer.newLine();
-                        writer.flush();
+                    if (parts.length < 3) {
+                        sendMessage("Usage: /send <username> <filename>");
                         continue;
                     }
 
-                    FileInputStream fis = new FileInputStream(file);
-                    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                    String targetUser = parts[1];
+                    String filename = parts[2];
 
-                    byte[] buffer = new byte[4096];
-                    int bytesRead;
+                    ClientHandling target = Chatroom.getUser(targetUser);
 
-                    while ((bytesRead = fis.read(buffer)) != -1) {
-                        bos.write(buffer, 0, bytesRead);
+                    if (target == null) {
+                        sendMessage("User not found: " + targetUser);
+                        continue;
                     }
 
-                    fis.close();
+                    File file = new File(filename);
+                    if (!file.exists()) {
+                        sendMessage("File not found: " + filename);
+                        continue;
+                    }
 
-                    byte[] fileData = bos.toByteArray();
+                    long fileSize = file.length();
 
-                    Chatroom.sendFile(file.getName(), fileData, this);
+                    // Server only signals the receiver.
+                    target.sendMessage("FILE_OFFER " + username + " " + file.getName() + " " + fileSize);
+                    sendMessage("File offer sent to " + targetUser + ": " + file.getName());
+                }
 
-                    writer.write("File sent: " + file.getName());
-                    writer.newLine();
-                    writer.flush();
+                else if (message.startsWith("FILE_READY ")) {
+
+                    // FILE_READY <senderUsername>
+                    String[] parts = message.split(" ", 3);
+
+                    if (parts.length < 3) {
+                        sendMessage("Invalid FILE_READY message.");
+                        continue;
+                    }
+
+                    String senderUsername = parts[1];
+                    String port = parts[2];
+
+                    ClientHandling sender = Chatroom.getUser(senderUsername);
+
+                    if (sender != null) {
+                        // Tell sender the receiver's IP + port.
+                        String receiverIp = socket.getInetAddress().getHostAddress();
+                        sender.sendMessage("FILE_READY " + username + " " + receiverIp + " " + port);
+                    }
+                }
+
+                else if (message.startsWith("FILE_REJECT ")) {
+
+                    // FILE_REJECT
+                    String[] parts = message.split(" ", 2);
+
+                    if (parts.length < 2) {
+                        sendMessage("Invalid FILE_REJECT message.");
+                        continue;
+                    }
+
+                    String senderUsername = parts[1];
+                    ClientHandling sender = Chatroom.getUser(senderUsername);
+
+                    if (sender != null) {
+                        sender.sendMessage("FILE_REJECT " + username);
+                    }
                 }
 
                 else {
@@ -101,18 +136,6 @@ public class ClientHandling implements Runnable {
             writer.flush();
         } catch (IOException e) {
             System.out.println("Send error");
-        }
-    }
-
-    public void sendFile(String filename, byte[] data) {
-        try {
-            String encoded = Base64.getEncoder().encodeToString(data);
-
-            writer.write("FILE " + filename + " " + encoded);
-            writer.newLine();
-            writer.flush();
-        } catch (IOException e) {
-            System.out.println("Send file error");
         }
     }
 }
