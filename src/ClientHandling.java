@@ -91,16 +91,16 @@ public class ClientHandling implements Runnable {
     }
 
     public void sendMessage(String message) {
-
         try {
-
             writer.write(message);
             writer.newLine();
             writer.flush();
-
         } catch (IOException e) {
-
-            e.printStackTrace();
+            Chatroom.clientRemove(this);
+            try {
+                socket.close();
+            } catch (IOException ignored) {}
+            System.out.println("Failed to send message to disconnected client");
         }
     }
 }

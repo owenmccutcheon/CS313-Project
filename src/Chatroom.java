@@ -65,13 +65,10 @@ public class Chatroom {
 
 
     public static void sendGroupMessage(String group, String message, ClientHandling sender) {
-
         Set<ClientHandling> members = groups.get(group);
-
         if (members == null) return;
 
         for (ClientHandling client : members) {
-
             if (client != sender) {
                 client.sendMessage(message);
             }
